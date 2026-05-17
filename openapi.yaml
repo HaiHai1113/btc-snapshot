@@ -1,0 +1,55 @@
+openapi: 3.1.0
+info:
+  title: BTC Snapshot Read-Only API (GitHub Pages)
+  description: |
+    返回 Mac 端 btc_quick_scan.py 生成的 btc_snapshot.txt 当前内容,
+    用 {"snapshot": "..."} JSON 包装。供自定义 GPT (BTC 技术分析)
+    通过 GPT Actions 只读, 不提供任何写/交易能力。
+
+    托管方案: GitHub Pages (public repo HaiHai1113/btc-snapshot),
+    无任何鉴权, GPT Actions 身份验证选「无」。
+    跟 A 股 snapshot 物理隔离, 跑在两个独立 repo。
+
+    数据延迟说明:
+    - btc_quick_scan.py 采集间隔: 60 秒
+    - Mac -> GitHub Pages 同步间隔: 120 秒
+    - 因此 GPT 看到的快照最大滞后约 3 分钟
+
+    snapshot 字段包含: BTC/ETH 现价 / 24h 高低量 / 1h / 15m / 5m / 4h / 1d
+    多档 K 线、EMA / MACD / RSI 指标、当前未收 K 线。UTF-8 纯文本字符串。
+  version: "2.0.0"
+
+servers:
+  - url: https://haihai1113.github.io
+
+paths:
+  /btc-snapshot/latest.json:
+    get:
+      operationId: getBtcSnapshot
+      summary: 获取当前 BTC 快照(JSON 包装)
+      description: |
+        返回 BTC 多周期快照, 用 {"snapshot": "<原文>"} JSON 包装。
+        正文是 btc_quick_scan.py 输出的 btc_snapshot.txt 全文(UTF-8 纯文本)。
+      responses:
+        "200":
+          description: 快照 JSON
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SnapshotEnvelope"
+        "404":
+          description: 快照文件不存在(同步未跑 / Pages 未发布)
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    SnapshotEnvelope:
+      type: object
+      required: [snapshot]
+      properties:
+        snapshot:
+          type: string
+          description: btc_snapshot.txt 全文(UTF-8, 多周期 K 线 + EMA/MACD/RSI 指标)
